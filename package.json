@@ -1,0 +1,22 @@
+{
+  "name": "@wallchain/sdk",
+  "version": "0.4.0",
+  "description": "Simple integration to get MEV cashback.",
+  "main": "src/index.ts",
+  "type": "module",
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/react": "^18.2.7",
+    "react": "^18.2.0"
+  },
+  "dependencies": {
+    "@types/randombytes": "^2.0.0",
+    "@uniswap/permit2-sdk": "^1.2.0",
+    "bn.js": "^5.2.1",
+    "ethers": "^6.3.0",
+    "randombytes": "^2.1.0",
+    "web3": "^1.10.0",
+    "zod": "^3.21.4"
+  }
+}

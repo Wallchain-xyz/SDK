@@ -1,0 +1,38 @@
+{
+    "compilerOptions": {
+        "allowSyntheticDefaultImports": true,
+        "noImplicitAny": true,
+        "module": "ESNext",
+        "target": "ES2021",
+        "allowJs": true,
+        "jsx": "react",
+        "moduleResolution": "node",
+        "skipLibCheck": true,
+        "sourceMap": true,
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
+        "baseUrl": ".",
+        "paths": {
+            "$lib/*": [
+                "src/lib/*"
+            ],
+            "$styles/*": [
+                "src/styles/*"
+            ],
+            "$types/*": [
+                "src/types/*"
+            ],
+            "$components/*": [
+                "src/components/*"
+            ]
+        }
+    },
+    "strict": true,
+    "include": [
+        "**/*.ts",
+        "**/*.tsx"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+}

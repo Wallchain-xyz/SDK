@@ -31,7 +31,6 @@ export default class Permit2 {
 
         return new Permit2(provider, makeBN(resp).toNumber());
     }
-
     public async sign(tokenAddress: string, wallet: string, spender: string, value: string) {
         if (!this.address) throw new Error('Permit2 error: unsupported chain');
 

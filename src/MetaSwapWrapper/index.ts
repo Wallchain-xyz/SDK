@@ -1,10 +1,9 @@
-//import { ethers, Contract } from 'ethers';
-import Web3 from 'web3';
+//import Web3 from 'web3';
 import abi from './abi.json';
-import { Eip1193Provider } from 'ethers';
+import * as ethers from 'ethers';
 
 const addresses: { [key: number]: string } = {
-    56: '0x06e2b9b358471e1c82fa4f603a9cfcf56a48c477',
+    56: '0xD1F646ADb4876A58BFf81A511D5B247C66471343',
     137: '0x4DeF20E7DbfeAB6b2cFEB53bdcA28a6DCEd12317'
 } as const;
 
@@ -15,32 +14,27 @@ const maticPermits: { [key: string]: string } = {
 
 export default class MetaSwapWrapper {
     tokenAddress: string;
-    private web3: Web3;
-    //@ts-ignore
-    private contract: Web3.Contract;
-    private provider: Eip1193Provider;
+    private contract: ethers.Contract;
+    private provider: ethers.BrowserProvider;
     private originator: string[] = [];
     private originShare: number = 0;
 
 
     constructor(
-        provider: Eip1193Provider, 
+        provider: ethers.Eip1193Provider,
         chainId: number,
         originator: string[] = [],
         originShare: number = 0
     ) {
         if (!MetaSwapWrapper.isApplicable(chainId)) throw new Error('MetaSwapWrapper: Unsupported chain. Unsupported for now...');
 
-        //@ts-ignore
-        this.web3 = new Web3(provider);
+
         this.tokenAddress = addresses[chainId];
-        //@ts-ignore
-        this.contract = new this.web3.eth.Contract(abi, this.tokenAddress);
-        this.provider = provider;
+        this.provider = new ethers.BrowserProvider(provider);
+        this.contract = new ethers.Contract(this.tokenAddress, abi, this.provider);
         this.originator = originator;
         this.originShare = originShare;
     }
-
     static isApplicable(chainId: number) {
         return Object.keys(addresses).includes(chainId.toString());
     }
@@ -51,9 +45,8 @@ export default class MetaSwapWrapper {
         return addresses[chainId] as string;
     }
     public getAccounts() {
-        return this.web3.eth.getAccounts();
+        return this.provider.listAccounts();
     }
-
     public async generateNewData(
         callTarget: string,
         isPermit: boolean,
@@ -71,20 +64,27 @@ export default class MetaSwapWrapper {
 
     ) {
         const approveTarget = maticPermits[callTarget] || callTarget;
-        return this.contract.methods.swapWithWallchain({
-            callTarget,
-            approveTarget,
-            isPermit,
-            targetData,
-            masterInput,
-            originator: this.originator,
-            amount,
-            srcToken,
-            dstToken,
-            originShare: this.originShare,
-            permit,
-            signature
-        }).encodeABI();
+        const method = abi.find(({ name }) => name === 'swapWithWallchain');
+        if (!method || !method.inputs) throw new Error('MetaSwapWrapper: Method not found');
+
+        const data = this.contract.interface.encodeFunctionData('swapWithWallchain', [
+            {
+                callTarget,
+                approveTarget,
+                isPermit,
+                targetData,
+                masterInput,
+                originator: this.originator,
+                amount,
+                srcToken,
+                dstToken,
+                originShare: this.originShare,
+                permit,
+                signature
+            }
+        ]);
+
+        return data;
     }
 }
 

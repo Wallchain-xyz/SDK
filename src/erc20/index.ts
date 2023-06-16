@@ -1,35 +1,24 @@
-//import { ethers, Contract } from 'ethers';
-import Web3 from 'web3';
 import abi from './abi.json';
-import type { Eip1193Provider } from 'ethers';
+import * as ethers from 'ethers';
 import { makeBN } from '../utils';
 
 const native = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
 export default class ERC20Token {
     tokenAddress: string;
-    public web3: Web3;
-    //@ts-ignore
-    public contract: Web3.Contract;
-    private provider: Eip1193Provider;
-    private pendingAllowance: boolean;
+    public contract: ethers.Contract;
+    private provider: ethers.BrowserProvider;
 
-
-    constructor(provider: Eip1193Provider, tokenAddress: string) {
-        //@ts-expect-error Web3 requires depricated sendAsync
-        this.web3 = new Web3(provider);
+    constructor(provider: ethers.Eip1193Provider, tokenAddress: string) {
         this.tokenAddress = tokenAddress;
-        //@ts-expect-error excessive abi type defenition is web3
-        this.contract = new this.web3.eth.Contract(abi, tokenAddress);
-        this.provider = provider;
+        this.provider = new ethers.BrowserProvider(provider);
+        this.contract = new ethers.Contract(tokenAddress, abi, this.provider);
     }
-
     public get isNative () {
         return this.tokenAddress.toLocaleLowerCase() === native.toLocaleLowerCase();
     }
-
     public async allowance(owner_adress: string, target_adress: string) {
-        const allowance: string = await this.contract.methods.allowance(owner_adress, target_adress).call();
+        const allowance: string = await this.contract.allowance(owner_adress, target_adress);
         return allowance;
     }
     public async hasEnoughAllowance (wallet: string, spender: string, amount: string) {
@@ -38,9 +27,8 @@ export default class ERC20Token {
         const currentAllowance = await this.allowance(wallet, spender);
         return makeBN(amount).lt(makeBN(currentAllowance as string));
     }
-
     public async createApproveTransaction (owner: string, spender: string, amount: string): Promise<{ from: string, to: string, data: string, value: string}> {
-        const data = await this.contract.methods.approve(spender, amount).encodeABI() as string;
+        const data =  this.contract.interface.encodeFunctionData('approve', [spender, amount]);
         
         return {
             from: owner,
@@ -49,18 +37,17 @@ export default class ERC20Token {
             value: amount
         }
     }
-
     public async balanceOf(): Promise<string> {
         try {
-            const accounts = await this.web3.eth.getAccounts();
-            return this.contract.methods.balanceOf(accounts[0]).call();
+            const accounts = await this.provider.listAccounts();
+            const address = await accounts[0].getAddress();
+            return this.contract.balanceOf(address);
         } catch(e) {
             return '0';
         }
     }
-
     public async getDecimals(): Promise<string> {
-        let decimals = await this.contract.methods.decimals().call();
+        let decimals = await this.contract.decimals();
         return decimals;
     }
 }

@@ -5,8 +5,6 @@ import ERC20Token from './erc20/index';
 import { makeBN } from './utils';
 import Permit2 from './Permit2';
 
-export { default as ERC20Token } from './erc20/index';
-
 export type TOptions = {
     provider: Eip1193Provider,
     keys: {
@@ -36,6 +34,8 @@ const chainIdToCodeMap:{ [key: number]: string } = {
     56: 'bsc'
 };
 
+export const classes = { ERC20Token, MetaSwapWrapper };
+
 export default class WallchainSDK {
     keys: { [key: string]: string }
     provider: Eip1193Provider;
@@ -43,7 +43,6 @@ export default class WallchainSDK {
         this.keys = options.keys;
         this.provider = options.provider;
     }
-
     public async checkForMEV(transatcion: TTransaction): Promise<TMEVFoundResponse | TMEVNotFoundResponse> {
         const chainId = await this.getChain();
         const key = this.keys[chainIdToCodeMap[chainId]];
@@ -57,6 +56,7 @@ export default class WallchainSDK {
         if ('pathFound' in apiResponse && apiResponse.pathFound) {
             return {
                 MEVFound: true,
+                //@ts-expect-error type inference is not working here
                 cashbackAmount: apiResponse.summary.searchSummary.expectedProfit.toString(),
                 masterInput: apiResponse.transactionArgs.masterInput as unknown as string
             };
@@ -65,7 +65,8 @@ export default class WallchainSDK {
         return { MEVFound: false };
     }
     public async getChain() {
-        return makeBN(await this.provider.request({ method: 'eth_chainId' })).toNumber();
+        const resp = await this.provider.request({ method: 'eth_chainId' });
+        return makeBN(resp).toNumber();
     }
     public async supportsChain() {
         return !!chainIdToCodeMap[await await this.getChain()];
@@ -125,7 +126,7 @@ export default class WallchainSDK {
             value: originalTransaction.value,
             from: originalTransaction.from,
             to: MetaSwapWrapper.getAddress(chainId),
-            gas: '0x1E8480' // 2 000 000 gas limit
+            gas: '0x2625A0' // 2 500 000 gas limit
         }
     }
     public async signPermit(tokenAddress: string, wallet: string, spender: string, value: string) {
@@ -138,9 +139,12 @@ export default class WallchainSDK {
 
         return false;
     }
+    static getSpenderForChain(chainId: number): string {
+        return MetaSwapWrapper.getSpenderAddress(chainId);
+    }
     public async getSpender ():Promise<string> {
         const chainId = await this.getChain();
-        return MetaSwapWrapper.getSpenderAddress(chainId);
+        return WallchainSDK.getSpenderForChain(chainId);
     }
     public async getSpenderForAllowance ():Promise<string> {
         const chainId = await this.getChain();
@@ -157,7 +161,6 @@ export default class WallchainSDK {
 
         return await contract.hasEnoughAllowance(holder, spender, amount);
     }
-
     public async createAllowanceTransaction(tokenAddress: string, holder: string, amount: string) {
         const spender = await this.getSpenderForAllowance();
 

@@ -7,7 +7,6 @@ const addresses: { [key: number]: string } = {
     137: '0x4DeF20E7DbfeAB6b2cFEB53bdcA28a6DCEd12317'
 } as const;
 
-
 const maticPermits: { [key: string]: string } = {
     '0x4c60051384bd2d3c01bfc845cf5f4b44bcbe9de5': '0x000000000022D473030F116dDEE9F6B43aC78BA3'
 } as const;
@@ -18,31 +17,33 @@ export default class MetaSwapWrapper {
     private provider: ethers.BrowserProvider;
     private originator: string[] = [];
     private originShare: number = 0;
-
+    public addresses: { [key: number]: string } = addresses;
 
     constructor(
         provider: ethers.Eip1193Provider,
         chainId: number,
         originator: string[] = [],
-        originShare: number = 0
+        originShare: number = 0,
+        overrideAddresses?: { [key: number]: string }
     ) {
-        if (!MetaSwapWrapper.isApplicable(chainId)) throw new Error('MetaSwapWrapper: Unsupported chain. Unsupported for now...');
+        if (!this.isApplicable(chainId)) throw new Error('MetaSwapWrapper: Unsupported chain. Unsupported for now...');
 
+        if (overrideAddresses) this.addresses = { ...this.addresses, ...overrideAddresses };
 
-        this.tokenAddress = addresses[chainId];
+        this.tokenAddress = this.addresses[chainId];
         this.provider = new ethers.BrowserProvider(provider);
         this.contract = new ethers.Contract(this.tokenAddress, abi, this.provider);
         this.originator = originator;
         this.originShare = originShare;
     }
-    static isApplicable(chainId: number) {
-        return Object.keys(addresses).includes(chainId.toString());
+    public isApplicable(chainId: number) {
+        return Object.keys(this.addresses).includes(chainId.toString());
     }
-    static getAddress(chainId: number) {
-        return addresses[chainId] as string;
+    public getAddress(chainId: number) {
+        return this.addresses[chainId] as string;
     }
-    static getSpenderAddress(chainId: number) {
-        return addresses[chainId] as string;
+    public getSpenderAddress(chainId: number) {
+        return this.addresses[chainId] as string;
     }
     public getAccounts() {
         return this.provider.listAccounts();

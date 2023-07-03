@@ -9,7 +9,8 @@ export type TOptions = {
     provider: Eip1193Provider,
     keys: {
         [key: string]: string
-    }
+    },
+    overrideAddresses?: { [key: number]: string }
 }
 
 export type TTransaction = {
@@ -39,9 +40,11 @@ export const classes = { ERC20Token, MetaSwapWrapper };
 export default class WallchainSDK {
     keys: { [key: string]: string }
     provider: Eip1193Provider;
+    overrideAddresses?: { [key: number]: string };
     constructor(options: TOptions) {
         this.keys = options.keys;
         this.provider = options.provider;
+        if (options.overrideAddresses) this.overrideAddresses = options.overrideAddresses;
     }
     public async checkForMEV(transatcion: TTransaction): Promise<TMEVFoundResponse | TMEVNotFoundResponse> {
         const chainId = await this.getChain();
@@ -101,7 +104,7 @@ export default class WallchainSDK {
             sign: '0x',
             hash: '0x'
         }
-        const mataSwapContract = new MetaSwapWrapper(this.provider, chainId);
+        const mataSwapContract = new MetaSwapWrapper(this.provider, chainId, [], 0, this.overrideAddresses);
 
         const newData = await mataSwapContract.generateNewData(
             originalTransaction.to,
@@ -125,7 +128,7 @@ export default class WallchainSDK {
             data: newData,
             value: originalTransaction.value,
             from: originalTransaction.from,
-            to: MetaSwapWrapper.getAddress(chainId),
+            to: mataSwapContract.getAddress(chainId),
             gas: '0x2625A0' // 2 500 000 gas limit
         }
     }
@@ -139,19 +142,21 @@ export default class WallchainSDK {
 
         return false;
     }
-    static getSpenderForChain(chainId: number): string {
-        return MetaSwapWrapper.getSpenderAddress(chainId);
+    public getSpenderForChain(chainId: number): string {
+        const mataSwapContract = new MetaSwapWrapper(this.provider, chainId, [], 0, this.overrideAddresses);
+        return mataSwapContract.getSpenderAddress(chainId);
     }
     public async getSpender ():Promise<string> {
         const chainId = await this.getChain();
-        return WallchainSDK.getSpenderForChain(chainId);
+        return this.getSpenderForChain(chainId);
     }
     public async getSpenderForAllowance ():Promise<string> {
         const chainId = await this.getChain();
         if (Permit2.supportsChain(chainId)) {
             return Permit2.getAddress(chainId);
         } else {
-            return MetaSwapWrapper.getSpenderAddress(chainId);
+            const mataSwapContract = new MetaSwapWrapper(this.provider, chainId, [], 0, this.overrideAddresses);
+            return mataSwapContract.getSpenderAddress(chainId);
         }
     }
     public async hasEnoughAllowance(tokenAddress: string, holder: string, amount: string): Promise<boolean> {

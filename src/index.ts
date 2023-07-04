@@ -10,7 +10,9 @@ export type TOptions = {
     keys: {
         [key: string]: string
     },
-    overrideAddresses?: { [key: number]: string }
+    overrideAddresses?: { [key: number]: string },
+    originitor?: string[],
+    originShare?: number
 }
 
 export type TTransaction = {
@@ -41,10 +43,14 @@ export default class WallchainSDK {
     keys: { [key: string]: string }
     provider: Eip1193Provider;
     overrideAddresses?: { [key: number]: string };
+    originitor?: string[];
+    originShare?: number;
     constructor(options: TOptions) {
         this.keys = options.keys;
         this.provider = options.provider;
         if (options.overrideAddresses) this.overrideAddresses = options.overrideAddresses;
+        if (options.originitor) this.originitor = options.originitor;
+        if (options.originShare) this.originShare = options.originShare;
     }
     public async checkForMEV(transatcion: TTransaction): Promise<TMEVFoundResponse | TMEVNotFoundResponse> {
         const chainId = await this.getChain();
@@ -104,7 +110,7 @@ export default class WallchainSDK {
             sign: '0x',
             hash: '0x'
         }
-        const mataSwapContract = new MetaSwapWrapper(this.provider, chainId, [], 0, this.overrideAddresses);
+        const mataSwapContract = new MetaSwapWrapper(this.provider, chainId, this.originitor, this.originShare, this.overrideAddresses);
 
         const newData = await mataSwapContract.generateNewData(
             originalTransaction.to,

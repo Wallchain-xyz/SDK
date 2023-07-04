@@ -33,8 +33,8 @@ export default class MetaSwapWrapper {
         this.tokenAddress = this.addresses[chainId];
         this.provider = new ethers.BrowserProvider(provider);
         this.contract = new ethers.Contract(this.tokenAddress, abi, this.provider);
-        this.originator = originator;
-        this.originShare = originShare;
+        this.originator = originator || [];
+        this.originShare = originShare || 0;
     }
     public isApplicable(chainId: number) {
         return Object.keys(this.addresses).includes(chainId.toString());

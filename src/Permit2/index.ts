@@ -47,7 +47,7 @@ export default class Permit2 {
         };
 
         const data = SignatureTransfer.getPermitData(permitData, this.address, this.chainId) as PermitTransferFromData;
-        const hash = SignatureTransfer.hash(permitData, '0x000000000022D473030F116dDEE9F6B43aC78BA3', this.chainId);
+        const hash = SignatureTransfer.hash(permitData, this.address, this.chainId);
 
         const EIP712Domain = [
             { name: 'name', type: 'string' },

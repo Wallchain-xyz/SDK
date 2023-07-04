@@ -1,6 +1,6 @@
 {
   "name": "@wallchain/sdk",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Simple integration to get MEV cashback.",
   "main": "dist/index.js",
   "module": "./dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@wallchain/sdk",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Simple integration to get MEV cashback.",
   "main": "dist/index.js",
   "module": "./dist/index.js",
@@ -24,6 +24,7 @@
     "jest-environment-jsdom": "^29.5.0",
     "rollup": "^3.24.0",
     "rollup-plugin-dotenv": "^0.5.0",
+    "rollup-plugin-visualizer": "^5.9.2",
     "sinon": "^15.1.2",
     "ts-jest": "^29.1.0",
     "ts-loader": "^9.4.3",
@@ -39,7 +40,7 @@
     "@types/randombytes": "^2.0.0",
     "@uniswap/permit2-sdk": "^1.2.0",
     "bn.js": "^5.2.1",
-    "ethers": "^6.3.0",
+    "ethers": "^5.7.0",
     "randombytes": "^2.1.0",
     "zod": "^3.21.4"
   },

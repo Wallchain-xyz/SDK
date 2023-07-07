@@ -1,18 +1,19 @@
 import abi from './abi.json';
-import * as ethers from 'ethers';
+import { Contract } from '@ethersproject/contracts';
+import { ExternalProvider, Web3Provider } from '@ethersproject/providers';
 import { makeBN } from '../utils';
 
 const native = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
 export default class ERC20Token {
     tokenAddress: string;
-    public contract: ethers.Contract;
-    private provider: ethers.BrowserProvider;
+    public contract: Contract;
+    private provider: Web3Provider;
 
-    constructor(provider: ethers.Eip1193Provider, tokenAddress: string) {
+    constructor(provider: ExternalProvider, tokenAddress: string) {
         this.tokenAddress = tokenAddress;
-        this.provider = new ethers.BrowserProvider(provider);
-        this.contract = new ethers.Contract(tokenAddress, abi, this.provider);
+        this.provider = new Web3Provider(provider);
+        this.contract = new Contract(tokenAddress, abi, this.provider);
     }
     public get isNative () {
         return this.tokenAddress.toLocaleLowerCase() === native.toLocaleLowerCase();
@@ -40,7 +41,7 @@ export default class ERC20Token {
     public async balanceOf(): Promise<string> {
         try {
             const accounts = await this.provider.listAccounts();
-            const address = await accounts[0].getAddress();
+            const address = accounts[0];
             return this.contract.balanceOf(address);
         } catch(e) {
             return '0';

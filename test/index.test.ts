@@ -1,3 +1,5 @@
+import type { ExternalProvider } from '@ethersproject/providers';
+
 import { assert } from 'chai'
 import sinon from 'sinon';
 import WallchainSDK from "../src";
@@ -47,13 +49,7 @@ const masterInput = '0x000000000000000000000000000000000000000000000000000000000
 
 
 describe('main methods', function () {
-    const provider = new HttpProvider(process.env.WALLCHAIN_RPC_URL as string);
-    Object.defineProperty(provider, 'request', {
-        value: new Proxy(provider.request, { apply: async (target, thisArg, args) => {
-            const resp = await Reflect.apply(target, thisArg, args);
-            return resp.result;
-        }}),
-    });
+    const provider = new HttpProvider(process.env.WALLCHAIN_RPC_URL as string) as unknown as ExternalProvider;
 
     const sdk = new WallchainSDK({
         provider,

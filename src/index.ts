@@ -1,4 +1,4 @@
-import type { Eip1193Provider } from 'ethers';
+import { ExternalProvider, Web3Provider } from '@ethersproject/providers';
 import { WallchainApi } from './api';
 import MetaSwapWrapper from './MetaSwapWrapper';
 import ERC20Token from './erc20/index';
@@ -6,7 +6,7 @@ import { makeBN } from './utils';
 import Permit2 from './Permit2';
 
 export type TOptions = {
-    provider: Eip1193Provider,
+    provider: ExternalProvider,
     keys: {
         [key: string]: string
     },
@@ -41,13 +41,13 @@ export const classes = { ERC20Token, MetaSwapWrapper };
 
 export default class WallchainSDK {
     keys: { [key: string]: string }
-    provider: Eip1193Provider;
+    provider: Web3Provider;
     overrideAddresses?: { [key: number]: string };
     originitor?: string[];
     originShare?: number;
     constructor(options: TOptions) {
         this.keys = options.keys;
-        this.provider = options.provider;
+        this.provider = new Web3Provider(options.provider);
         if (options.overrideAddresses) this.overrideAddresses = options.overrideAddresses;
         if (options.originitor) this.originitor = options.originitor;
         if (options.originShare) this.originShare = options.originShare;
@@ -74,8 +74,9 @@ export default class WallchainSDK {
         return { MEVFound: false };
     }
     public async getChain() {
-        const resp = await this.provider.request({ method: 'eth_chainId' });
-        return makeBN(resp).toNumber();
+        const resp = await this.provider.send('eth_chainId', []);
+  
+        return makeBN(resp?.result || resp).toNumber();
     }
     public async supportsChain() {
         return !!chainIdToCodeMap[await await this.getChain()];
@@ -110,7 +111,7 @@ export default class WallchainSDK {
             sign: '0x',
             hash: '0x'
         }
-        const mataSwapContract = new MetaSwapWrapper(this.provider, chainId, this.originitor, this.originShare, this.overrideAddresses);
+        const mataSwapContract = new MetaSwapWrapper(this.provider.provider, chainId, this.originitor, this.originShare, this.overrideAddresses);
 
         const newData = await mataSwapContract.generateNewData(
             originalTransaction.to,
@@ -149,7 +150,7 @@ export default class WallchainSDK {
         return false;
     }
     public getSpenderForChain(chainId: number): string {
-        const mataSwapContract = new MetaSwapWrapper(this.provider, chainId, [], 0, this.overrideAddresses);
+        const mataSwapContract = new MetaSwapWrapper(this.provider.provider, chainId, [], 0, this.overrideAddresses);
         return mataSwapContract.getSpenderAddress(chainId);
     }
     public async getSpender ():Promise<string> {
@@ -161,21 +162,21 @@ export default class WallchainSDK {
         if (Permit2.supportsChain(chainId)) {
             return Permit2.getAddress(chainId);
         } else {
-            const mataSwapContract = new MetaSwapWrapper(this.provider, chainId, [], 0, this.overrideAddresses);
+            const mataSwapContract = new MetaSwapWrapper(this.provider.provider, chainId, [], 0, this.overrideAddresses);
             return mataSwapContract.getSpenderAddress(chainId);
         }
     }
     public async hasEnoughAllowance(tokenAddress: string, holder: string, amount: string): Promise<boolean> {
         if (tokenAddress.toLowerCase() === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'.toLowerCase()) return true;
         const spender = await this.getSpenderForAllowance();
-        const contract = new ERC20Token(this.provider, tokenAddress);
+        const contract = new ERC20Token(this.provider.provider, tokenAddress);
 
         return await contract.hasEnoughAllowance(holder, spender, amount);
     }
     public async createAllowanceTransaction(tokenAddress: string, holder: string, amount: string) {
         const spender = await this.getSpenderForAllowance();
 
-        const contract = new ERC20Token(this.provider, tokenAddress);
+        const contract = new ERC20Token(this.provider.provider, tokenAddress);
         return await contract.createApproveTransaction(holder, spender, amount);
     }
 }

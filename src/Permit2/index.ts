@@ -1,6 +1,6 @@
 import { SignatureTransfer, PermitTransferFromData } from '@uniswap/permit2-sdk';
 import BN from 'bn.js';
-import * as ethers from 'ethers';
+import { Web3Provider, ExternalProvider } from '@ethersproject/providers';
 import { makeBN, randNonce } from '../utils';
 
 const addresses: { [key: number]: string } = {
@@ -9,10 +9,10 @@ const addresses: { [key: number]: string } = {
 } as const;
 
 export default class Permit2 {
-    provider: ethers.Eip1193Provider;
+    provider: Web3Provider;
     address: string | undefined;
     chainId: number;
-    constructor(provider: ethers.Eip1193Provider, chainId: number) {
+    constructor(provider: Web3Provider, chainId: number) {
         this.provider = provider;
         this.chainId = chainId;
         this.address = addresses[new BN(chainId, 16).toNumber()];
@@ -26,10 +26,11 @@ export default class Permit2 {
     static getAddress(chainId: number) {
         return addresses[chainId];
     }
-    static async createInstance(provider: ethers.Eip1193Provider) {
-        const resp = await provider.request({method: 'eth_chainId', params:[] });
+    static async createInstance(externalProvider: ExternalProvider) {
+        const provider = new Web3Provider(externalProvider);
+        const resp = await provider.send('eth_chainId', []);
 
-        return new Permit2(provider, makeBN(resp).toNumber());
+        return new Permit2(provider, makeBN(resp.result || resp).toNumber());
     }
     public async sign(tokenAddress: string, wallet: string, spender: string, value: string) {
         if (!this.address) throw new Error('Permit2 error: unsupported chain');
@@ -64,10 +65,7 @@ export default class Permit2 {
             types: { ...data.types, EIP712Domain }
         }
 
-        const sign = await this.provider.request({
-            method: 'eth_signTypedData_v4',
-            params: [wallet, JSON.stringify(message)],
-        });
+        const sign = (await this.provider.send('eth_signTypedData_v4', [wallet, JSON.stringify(message)])).result;
 
         return { data, hash, sign };
     }

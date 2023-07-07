@@ -1,6 +1,7 @@
 //import Web3 from 'web3';
 import abi from './abi.json';
-import * as ethers from 'ethers';
+import { Contract } from '@ethersproject/contracts';
+import { ExternalProvider, Web3Provider } from '@ethersproject/providers';
 
 const addresses: { [key: number]: string } = {
     56: '0xD1F646ADb4876A58BFf81A511D5B247C66471343',
@@ -13,14 +14,14 @@ const maticPermits: { [key: string]: string } = {
 
 export default class MetaSwapWrapper {
     tokenAddress: string;
-    private contract: ethers.Contract;
-    private provider: ethers.BrowserProvider;
+    private contract: Contract;
+    private provider: Web3Provider;
     private originator: string[] = [];
     private originShare: number = 0;
     public addresses: { [key: number]: string } = addresses;
 
     constructor(
-        provider: ethers.Eip1193Provider,
+        provider: ExternalProvider,
         chainId: number,
         originator: string[] = [],
         originShare: number = 0,
@@ -31,8 +32,8 @@ export default class MetaSwapWrapper {
         if (overrideAddresses) this.addresses = { ...this.addresses, ...overrideAddresses };
 
         this.tokenAddress = this.addresses[chainId];
-        this.provider = new ethers.BrowserProvider(provider);
-        this.contract = new ethers.Contract(this.tokenAddress, abi, this.provider);
+        this.provider = new Web3Provider(provider);
+        this.contract = new Contract(this.tokenAddress, abi, this.provider);
         this.originator = originator || [];
         this.originShare = originShare || 0;
     }

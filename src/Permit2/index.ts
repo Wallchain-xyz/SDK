@@ -65,8 +65,8 @@ export default class Permit2 {
             types: { ...data.types, EIP712Domain }
         }
 
-        const sign = (await this.provider.send('eth_signTypedData_v4', [wallet, JSON.stringify(message)])).result;
+        const sign = await this.provider.send('eth_signTypedData_v4', [wallet, JSON.stringify(message)]);
 
-        return { data, hash, sign };
+        return { data, hash, sign: sign.result || sign };
     }
 }

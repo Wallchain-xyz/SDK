@@ -66,7 +66,7 @@ export default class WallchainSDK {
             return {
                 MEVFound: true,
                 //@ts-expect-error type inference is not working here
-                cashbackAmount: apiResponse.summary.searchSummary.expectedProfit.toString(),
+                cashbackAmount: apiResponse.summary.searchSummary?.expectedUsdProfit.toString(),
                 masterInput: apiResponse.transactionArgs.masterInput as unknown as string
             };
         }

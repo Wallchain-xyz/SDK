@@ -9,11 +9,12 @@ export default class ERC20Token {
     tokenAddress: string;
     public contract: Contract;
     private provider: Web3Provider;
+    public abi: any = abi;
 
     constructor(provider: ExternalProvider, tokenAddress: string) {
         this.tokenAddress = tokenAddress;
         this.provider = new Web3Provider(provider);
-        this.contract = new Contract(tokenAddress, abi, this.provider);
+        this.contract = new Contract(tokenAddress, abi, this.provider.getSigner());
     }
     public get isNative () {
         return this.tokenAddress.toLocaleLowerCase() === native.toLocaleLowerCase();
@@ -26,9 +27,13 @@ export default class ERC20Token {
         if (this.isNative) return true;
 
         const currentAllowance = await this.allowance(wallet, spender);
-        return makeBN(amount).lt(makeBN(currentAllowance as string));
+        return makeBN(amount).lte(makeBN(currentAllowance as string));
     }
-    public async createApproveTransaction (owner: string, spender: string, amount: string): Promise<{ from: string, to: string, data: string, value: string}> {
+    public async createApproveTransaction (
+        owner: string, 
+        spender: string,
+        amount: string
+    ): Promise<{ from: string, to: string, data: string, value: string}> {
         const data =  this.contract.interface.encodeFunctionData('approve', [spender, amount]);
         
         return {

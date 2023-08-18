@@ -2,10 +2,9 @@ import BN from "bn.js";
 import randomBytes from "randombytes";
 
 export function makeBN(value: string | number | BN) {
-    if (value instanceof BN) return value;
-   
-    if (typeof value === 'number') return new BN(value);
-   
+    if (value instanceof BN) return value as BN;
+    if ((value as any)?._isBigNumber) return new BN((value as unknown as {_hex: string})._hex.slice(2), 16);
+    if (typeof value === 'number') return new BN(value.toString());
     if (value[0] === '0' && value[1] === 'x') return new BN(value.slice(2), 16);
     return new BN(value, 10);
 }

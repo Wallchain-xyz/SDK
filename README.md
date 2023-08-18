@@ -22,7 +22,7 @@ const wallchain = new SDK({
 ```
 
 ### 2. Check for MEV oppurtunity
-```js
+```typescript
 const transactionData = {
     from:  'address',
     to:    'address',
@@ -34,7 +34,7 @@ const apiResponse = await wallchain.checkMEV(transactionData);
 ```
 
 In case MEV is found response will be shaped this way:
-```
+```typescript
 {
     MEVFound: true,
     cahsbackAmount: string, // in usd
@@ -42,7 +42,7 @@ In case MEV is found response will be shaped this way:
 }
 ```
 Or sad version of it:
-```
+```typescript
 {
     MEVFound: false
 }
@@ -52,20 +52,20 @@ Or sad version of it:
 
 Permit2 technology is being used to withdraw ERC-20 for executing the swap. No
 need to ask for permit if swapping native token of the chain.
-```js
+```typescript
 const hasAllowance = await sdk.hasEnoughAllowance(sourceTokenAddress, ownerAddress, amount);
 
 if (!hasAllowance) {
     // returns Permit2 if chain supports, fallbacks to Wallchain contract
     const spenderForAllowance = await sdk.getSpenderForAllowance();
-    // TODO: ask for allowance and continue
+
 }
 ```
 
 ### 4. Permit
 In case user swaps ERC-20 token, we'd need to ask for a permit to execute the
 swap itself.
-```js
+```typescript
 const spender = await sdk.getSpender();  // Wallchain's address at current chain
 const witness = await sdk.signPermit(tokenAddress, wallet, spender, value);
 ```

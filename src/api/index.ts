@@ -7,9 +7,7 @@ export type TSwapRequestData = {
     value: string,
 };
 export type TSwapRequestError = {
-    path_found: false,
-    error: true,
-    error_data: Error
+    bid: null
 };
 
 const RESP_TIMEOUT = 5 * 1000; // 5 seconds
@@ -21,8 +19,9 @@ const idToCodeMap: { [ key: string ]: string } = {
     '1':     'eth',
 };
 
-const makeHostname = (chain: string) =>  `https://${chain}.wallchains.com/upgrade_txn/`;
+const makeHostname = (chain: string) =>  `https://${chain}.wallchains.com/meta_intent/`;
 
+export type TApiRespArguments = TSwapPostResponse['backRun']['searcher_request'];
 
 export class WallchainApi {
     static makeQueryString(key: string, chainCode: string) {

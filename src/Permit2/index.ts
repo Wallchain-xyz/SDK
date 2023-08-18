@@ -67,6 +67,6 @@ export default class Permit2 {
 
         const sign = await this.provider.send('eth_signTypedData_v4', [wallet, JSON.stringify(message)]);
 
-        return { data, hash, sign: sign.result || sign };
+        return { data, hash, sign: (sign.result || sign) };
     }
 }

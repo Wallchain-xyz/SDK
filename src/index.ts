@@ -1,5 +1,5 @@
 import { ExternalProvider, Web3Provider } from '@ethersproject/providers';
-import { WallchainApi } from './api';
+import { WallchainApi, TApiRespArguments } from './api';
 import MetaSwapWrapper from './MetaSwapWrapper';
 import ERC20Token from './erc20/index';
 import { makeBN } from './utils';
@@ -25,7 +25,8 @@ export type TTransaction = {
 export type TMEVFoundResponse = {
     MEVFound: true,
     cashbackAmount: string,//in usd,
-    masterInput: string
+    searcher_request: TApiRespArguments,
+    searcher_signature: string
 }
 
 export type TMEVNotFoundResponse = {
@@ -38,6 +39,8 @@ const chainIdToCodeMap:{ [key: number]: string } = {
 };
 
 export const classes = { ERC20Token, MetaSwapWrapper };
+
+type THexString = string | number | bigint;
 
 export default class WallchainSDK {
     keys: { [key: string]: string }
@@ -62,12 +65,12 @@ export default class WallchainSDK {
 
         const apiResponse = await WallchainApi.makeSwapRequst(key, chainId, transatcion);
 
-        if ('pathFound' in apiResponse && apiResponse.pathFound) {
+        if ('backRun' in apiResponse && !!apiResponse.backRun) {
             return {
                 MEVFound: true,
-                //@ts-expect-error type inference is not working here
-                cashbackAmount: apiResponse.summary.searchSummary?.expectedUsdProfit.toString(),
-                masterInput: apiResponse.transactionArgs.masterInput as unknown as string
+                cashbackAmount: apiResponse.backRun?.expected_usd_profit.toString(),
+                searcher_request: apiResponse.backRun?.searcher_request,
+                searcher_signature: apiResponse.backRun?.searcher_signature
             };
         }
 
@@ -81,16 +84,26 @@ export default class WallchainSDK {
     public async supportsChain() {
         return !!chainIdToCodeMap[await await this.getChain()];
     }
-    public async createNewTransaction(originalTransaction: {
-        from:     string,
-        to:       string,
-        value:    string,
-        data:     string,
+    public async createNewTransaction(
+        callTarget: THexString,
         isPermit: boolean,
-        amountIn: string,
-        srcToken: string,
-        dstToken: string,
-    }, masterInput: string, witness?: Awaited<ReturnType<typeof this.signPermit>>) {
+        targetData: THexString,
+        amount: THexString,
+        srcToken: THexString,
+        dstToken: THexString,
+        searcherSignature: THexString,
+        searcherRequest: {
+            from: THexString,
+            to: THexString,
+            gas: THexString,
+            nonce: THexString,
+            data: THexString,
+            bid: THexString,
+            maxGasPrice: THexString,
+            deadline: THexString,
+            userCallHash: THexString
+        }
+    , witness?: Awaited<ReturnType<typeof this.signPermit>>) {
         const chainId = await this.getChain();
 
         //Fallback in case of native token. Actuall values will be ignored by contract
@@ -113,28 +126,23 @@ export default class WallchainSDK {
         }
         const mataSwapContract = new MetaSwapWrapper(this.provider.provider, chainId, this.originitor, this.originShare, this.overrideAddresses);
 
+        
         const newData = await mataSwapContract.generateNewData(
-            originalTransaction.to,
-            originalTransaction.isPermit,
-            originalTransaction.data,
-            masterInput,
-            originalTransaction.amountIn,
-            originalTransaction.srcToken,
-            originalTransaction.dstToken,
-            {
-                permitted: {
-                    token: String(witness.data.values.permitted.token),
-                    amount: String(witness.data.values.permitted.amount)
-                },
-                nonce: String(witness.data.values.nonce),
-                deadline: String(witness.data.values.deadline)
-            },
+            callTarget,
+            isPermit,
+            targetData,
+            amount,
+            srcToken,
+            dstToken,
+            searcherSignature,
+            searcherRequest,
+            //@ts-ignore
+            witness.data.values,
             witness.sign
         );
         return {
             data: newData,
-            value: originalTransaction.value,
-            from: originalTransaction.from,
+            from: searcherRequest.from,
             to: mataSwapContract.getAddress(chainId),
             gas: '0x2625A0' // 2 500 000 gas limit
         }
@@ -148,6 +156,21 @@ export default class WallchainSDK {
         }
 
         return false;
+    }
+    public async signSearcherRequest(wallet: string, searcherRequest: {
+        from: THexString,
+        to: THexString,
+        gas: THexString,
+        nonce: THexString,
+        data: THexString,
+        bid: THexString,
+        maxGasPrice: THexString,
+        deadline: THexString,
+        userCallHash: THexString
+    }) {
+        const chainId = await this.getChain();
+        const mataSwapContract = new MetaSwapWrapper(this.provider.provider, chainId, this.originitor, this.originShare, this.overrideAddresses);
+        return mataSwapContract.signSearcherRequest(wallet, searcherRequest);
     }
     public getSpenderForChain(chainId: number): string {
         const mataSwapContract = new MetaSwapWrapper(this.provider.provider, chainId, [], 0, this.overrideAddresses);

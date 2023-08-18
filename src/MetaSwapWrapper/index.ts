@@ -2,6 +2,8 @@
 import abi from './abi.json';
 import { Contract } from '@ethersproject/contracts';
 import { ExternalProvider, Web3Provider } from '@ethersproject/providers';
+import { SignatureTransfer, PermitTransferFromData } from '@uniswap/permit2-sdk';
+import { makeBN } from '../utils';
 
 const addresses: { [key: number]: string } = {
     56: '0xD1F646ADb4876A58BFf81A511D5B247C66471343',
@@ -11,6 +13,8 @@ const addresses: { [key: number]: string } = {
 const maticPermits: { [key: string]: string } = {
     '0x4c60051384bd2d3c01bfc845cf5f4b44bcbe9de5': '0x000000000022D473030F116dDEE9F6B43aC78BA3'
 } as const;
+
+type THexString = string | number | bigint;
 
 export default class MetaSwapWrapper {
     tokenAddress: string;
@@ -33,7 +37,7 @@ export default class MetaSwapWrapper {
 
         this.tokenAddress = this.addresses[chainId];
         this.provider = new Web3Provider(provider);
-        this.contract = new Contract(this.tokenAddress, abi, this.provider);
+        this.contract = new Contract(this.tokenAddress, abi, this.provider.getSigner());
         this.originator = originator || [];
         this.originShare = originShare || 0;
     }
@@ -50,43 +54,88 @@ export default class MetaSwapWrapper {
         return this.provider.listAccounts();
     }
     public async generateNewData(
-        callTarget: string,
+        callTarget: THexString,
         isPermit: boolean,
-        targetData: string,
-        masterInput: string,
-        amount: string,
-        srcToken: string,
-        dstToken: string,
-        permit: {
-            permitted: { token: string, amount: string },
-            nonce: string,
-            deadline: string,
+        targetData: THexString,
+        amount: THexString,
+        srcToken: THexString,
+        dstToken: THexString,
+        searcherSignature: THexString,
+        searcherRequest: {
+            from: THexString,
+            to: THexString,
+            gas: THexString,
+            nonce: THexString,
+            data: THexString,
+            bid: THexString,
+            userCallHash: THexString,
+            maxGasPrice: THexString,
+            deadline: THexString
         },
-        signature: string
-
+        permit: {
+            permitted: { token: THexString, amount: THexString },
+            nonce: THexString,
+            deadline: THexString,
+        },
+        permit2signature: THexString
     ) {
-        const approveTarget = maticPermits[callTarget] || callTarget;
+        const approveTarget = maticPermits[callTarget as string] || callTarget;
         const method = abi.find(({ name }) => name === 'swapWithWallchain');
         if (!method || !method.inputs) throw new Error('MetaSwapWrapper: Method not found');
+        
+        searcherRequest.bid = makeBN(searcherRequest.bid as string).toString(10);
+        searcherRequest.gas = makeBN(searcherRequest.gas as string).toString(10);
+        searcherRequest.nonce = makeBN(searcherRequest.nonce as string).toString(10);
+        searcherRequest.maxGasPrice = makeBN(searcherRequest.maxGasPrice as string).toString(10);
 
-        const data = this.contract.interface.encodeFunctionData('swapWithWallchain', [
-            {
-                callTarget,
-                approveTarget,
-                isPermit,
-                targetData,
-                masterInput,
-                originator: this.originator,
-                amount,
-                srcToken,
-                dstToken,
-                originShare: this.originShare,
-                permit,
-                signature
-            }
-        ]);
+        const data = this.contract.interface.encodeFunctionData('swapWithWallchain', [{
+            callTarget,
+            approveTarget,
+            isPermit,
+            targetData,
+            amount,
+            srcToken,
+            dstToken,
+            originShare: this.originShare,
+            permit,
+            permit2signature,
+            searcherRequest,
+            searcherSignature,
+            originators: this.originator
+        }]);
 
         return data;
+    }
+    public async signSearcherRequest(
+        wallet: string,
+        searcherRequest: {
+            from: THexString,
+            to: THexString,
+            gas: THexString,
+            nonce: THexString,
+            data: THexString,
+            bid: THexString,
+            userCallHash: THexString,
+            maxGasPrice: THexString,
+            deadline: THexString
+        }): Promise<string> {
+        const input = abi
+            .find(({ name }) => name === 'swapWithWallchain')
+            ?.inputs
+            ?.find(({ name }) => name === 'searcherRequest') as unknown as { components: object[] }
+        const types = input.components;
+
+        const message = {
+            domain: {
+
+            },
+            types: types,
+            values: searcherRequest
+        };
+
+        const sign = await this.provider.send('eth_signTypedData_v4', [wallet, JSON.stringify(message)]);
+
+        return sign;
     }
 }
 

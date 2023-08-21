@@ -53,9 +53,9 @@ describe('sdk tests', function () {
         const resp = await sdk.checkForMEV(rawTxn);
         assert.deepEqual(resp, {
             MEVFound: true,
-            searcher_request: serverReponse.backRun.searcherRequest,
+            searcherRequest: serverReponse.backRun.searcherRequest,
             cashbackAmount: '750',
-            searcher_signature: serverReponse.backRun.searcherSignature
+            searcherSignature: serverReponse.backRun.searcherSignature
         });
         newFetch.reset();
         window.fetch = prevFetch;

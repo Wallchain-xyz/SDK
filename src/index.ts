@@ -26,8 +26,8 @@ export type TTransaction = {
 export type TMEVFoundResponse = {
     MEVFound: true,
     cashbackAmount: string,//in usd,
-    searcher_request: TApiRespArguments,
-    searcher_signature: string
+    searcherRequest: TApiRespArguments,
+    searcherSignature: string
 }
 
 export type TMEVNotFoundResponse = {
@@ -72,8 +72,8 @@ export default class WallchainSDK {
             return {
                 MEVFound: true,
                 cashbackAmount: apiResponse.backRun?.expectedUsdProfit.toString(),
-                searcher_request: apiResponse.backRun?.searcherRequest,
-                searcher_signature: apiResponse.backRun?.searcherSignature
+                searcherRequest: apiResponse.backRun?.searcherRequest,
+                searcherSignature: apiResponse.backRun?.searcherSignature
             };
         }
 

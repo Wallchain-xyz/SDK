@@ -11,6 +11,7 @@ export type TOptions = {
         [key: string]: string
     },
     overrideAddresses?: { [key: number]: string },
+    overridePermitAddresses?: { [key: string]: string },
     originitor?: string[],
     originShare?: number
 }
@@ -46,12 +47,14 @@ export default class WallchainSDK {
     keys: { [key: string]: string }
     provider: Web3Provider;
     overrideAddresses?: { [key: number]: string };
+    overridePermitAddresses?: { [key: string]: string };
     originitor?: string[];
     originShare?: number;
     constructor(options: TOptions) {
         this.keys = options.keys;
         this.provider = new Web3Provider(options.provider);
         if (options.overrideAddresses) this.overrideAddresses = options.overrideAddresses;
+        if (options.overridePermitAddresses) this.overridePermitAddresses = options.overridePermitAddresses;
         if (options.originitor) this.originitor = options.originitor;
         if (options.originShare) this.originShare = options.originShare;
     }
@@ -68,9 +71,9 @@ export default class WallchainSDK {
         if ('backRun' in apiResponse && !!apiResponse.backRun) {
             return {
                 MEVFound: true,
-                cashbackAmount: apiResponse.backRun?.expected_usd_profit.toString(),
-                searcher_request: apiResponse.backRun?.searcher_request,
-                searcher_signature: apiResponse.backRun?.searcher_signature
+                cashbackAmount: apiResponse.backRun?.expectedUsdProfit.toString(),
+                searcher_request: apiResponse.backRun?.searcherRequest,
+                searcher_signature: apiResponse.backRun?.searcherSignature
             };
         }
 
@@ -89,11 +92,11 @@ export default class WallchainSDK {
         isPermit: boolean,
         targetData: THexString,
         amount: THexString,
+        value: THexString,
         srcToken: THexString,
         dstToken: THexString,
         searcherSignature: THexString,
         searcherRequest: {
-            from: THexString,
             to: THexString,
             gas: THexString,
             nonce: THexString,
@@ -135,23 +138,24 @@ export default class WallchainSDK {
             srcToken,
             dstToken,
             searcherSignature,
-            searcherRequest,
+            {...searcherRequest, from: callTarget },
             //@ts-ignore
             witness.data.values,
             witness.sign
         );
         return {
             data: newData,
-            from: searcherRequest.from,
+            from: callTarget,
             to: mataSwapContract.getAddress(chainId),
+            value,
             gas: '0x2625A0' // 2 500 000 gas limit
         }
     }
     public async signPermit(tokenAddress: string, wallet: string, spender: string, value: string) {
         const chainId = await this.getChain();
+        const permit2 = new Permit2(this.provider, chainId, this.overridePermitAddresses);
 
-        if (Permit2.supportsChain(chainId)) {
-            const permit2 = new Permit2(this.provider, chainId);
+        if (permit2.supportsChain()) {
             return permit2.sign(tokenAddress, wallet, spender, value);
         }
 
@@ -182,8 +186,9 @@ export default class WallchainSDK {
     }
     public async getSpenderForAllowance ():Promise<string> {
         const chainId = await this.getChain();
-        if (Permit2.supportsChain(chainId)) {
-            return Permit2.getAddress(chainId);
+        const permit2 = new Permit2(this.provider, chainId, this.overridePermitAddresses);
+        if (permit2.supportsChain()) {
+            return permit2.getAddress() as string;
         } else {
             const mataSwapContract = new MetaSwapWrapper(this.provider.provider, chainId, [], 0, this.overrideAddresses);
             return mataSwapContract.getSpenderAddress(chainId);

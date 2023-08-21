@@ -5,26 +5,29 @@ import { makeBN, randNonce } from '../utils';
 
 const addresses: { [key: number]: string } = {
     137: '0x000000000022D473030F116dDEE9F6B43aC78BA3',
-    56: '0x000000000022D473030F116dDEE9F6B43aC78BA3'
+    56: '0x31c2F6fcFf4F8759b3Bd5Bf0e1084A055615c768'
 } as const;
 
 export default class Permit2 {
     provider: Web3Provider;
     address: string | undefined;
     chainId: number;
-    constructor(provider: Web3Provider, chainId: number) {
+    overrideAddresses?: { [key: number]: string };
+    constructor(provider: Web3Provider, chainId: number, overrideAddresses?: { [key: number]: string }) {
         this.provider = provider;
         this.chainId = chainId;
-        this.address = addresses[new BN(chainId, 16).toNumber()];
+        const haveOverride = overrideAddresses && overrideAddresses[new BN(chainId, 16).toNumber()];
+        this.address = haveOverride || addresses[new BN(chainId, 16).toNumber()];
+
         if (!this.address) {
             throw new Error('[WallchainSDK] Permit2 error: unsupported chain.');
         }
     }
-    static supportsChain(chainId: number) {
-        return !!addresses[chainId];
+    supportsChain() {
+        return !!this.address;
     }
-    static getAddress(chainId: number) {
-        return addresses[chainId];
+    getAddress() {
+        return this.address;
     }
     static async createInstance(externalProvider: ExternalProvider) {
         const provider = new Web3Provider(externalProvider);

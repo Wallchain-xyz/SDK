@@ -21,7 +21,7 @@ const idToCodeMap: { [ key: string ]: string } = {
 
 const makeHostname = (chain: string) =>  `https://${chain}.wallchains.com/meta_intent/`;
 
-export type TApiRespArguments = TSwapPostResponse['backRun']['searcher_request'];
+export type TApiRespArguments = TSwapPostResponse['backRun']['searcherRequest'];
 
 export class WallchainApi {
     static makeQueryString(key: string, chainCode: string) {

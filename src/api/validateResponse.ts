@@ -4,7 +4,7 @@ const stringOrNumber = z.union([ z.string(), z.number(), z.bigint() ]);
 
 export const SwapPostValidator = z.object({
     backRun: z.object({
-        searcher_request: z.object({
+        searcherRequest: z.object({
             to: stringOrNumber,
             gas: stringOrNumber,
             nonce: stringOrNumber,
@@ -14,8 +14,8 @@ export const SwapPostValidator = z.object({
             maxGasPrice: stringOrNumber,
             deadline: stringOrNumber
         }),
-        searcher_signature: z.string(),
-        expected_usd_profit: stringOrNumber
+        searcherSignature: z.string(),
+        expectedUsdProfit: stringOrNumber
     })
 });
 

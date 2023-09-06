@@ -1,5 +1,5 @@
 import { ExternalProvider, Web3Provider } from '@ethersproject/providers';
-import { WallchainApi, TApiRespArguments } from './api';
+import { WallchainApi, TApiRespArguments, TSwapInfo } from './api';
 import MetaSwapWrapper from './MetaSwapWrapper';
 import ERC20Token from './erc20/index';
 import { makeBN } from './utils';
@@ -25,9 +25,10 @@ export type TTransaction = {
 
 export type TMEVFoundResponse = {
     MEVFound: true,
-    cashbackAmount: string,//in usd,
+    cashbackAmount?: string,//in usd,
     searcherRequest: TApiRespArguments,
-    searcherSignature: string
+    searcherSignature: string,
+    suggestedGas?: string
 }
 
 export type TMEVNotFoundResponse = {
@@ -58,7 +59,7 @@ export default class WallchainSDK {
         if (options.originitor) this.originitor = options.originitor;
         if (options.originShare) this.originShare = options.originShare;
     }
-    public async checkForMEV(transatcion: TTransaction): Promise<TMEVFoundResponse | TMEVNotFoundResponse> {
+    public async checkForMEV(transatcion: TTransaction, swapInfo?: TSwapInfo): Promise<TMEVFoundResponse | TMEVNotFoundResponse> {
         const chainId = await this.getChain();
         const key = this.keys[chainIdToCodeMap[chainId]];
 
@@ -66,14 +67,17 @@ export default class WallchainSDK {
             return { MEVFound: false }
         }
 
-        const apiResponse = await WallchainApi.makeSwapRequst(key, chainId, transatcion);
+        const apiResponse = await WallchainApi.makeSwapRequst(key, chainId, transatcion, swapInfo);
 
         if ('backRun' in apiResponse && !!apiResponse.backRun) {
             return {
                 MEVFound: true,
-                cashbackAmount: apiResponse.backRun?.expectedUsdProfit.toString(),
+                cashbackAmount: apiResponse.backRun?.expectedUsdProfit?.toString(),
                 searcherRequest: apiResponse.backRun?.searcherRequest,
-                searcherSignature: apiResponse.backRun?.searcherSignature
+                searcherSignature: apiResponse.backRun?.searcherSignature,
+                suggestedGas: apiResponse.backRun?.suggestedGas ? 
+                    makeBN(apiResponse.backRun?.suggestedGas).toString(10) :
+                    undefined
             };
         }
 
@@ -145,7 +149,6 @@ export default class WallchainSDK {
         );
         return {
             data: newData,
-            from: callTarget,
             to: mataSwapContract.getAddress(chainId),
             value,
             gas: '0x2625A0' // 2 500 000 gas limit

@@ -15,7 +15,8 @@ export const SwapPostValidator = z.object({
             deadline: stringOrNumber
         }),
         searcherSignature: z.string(),
-        expectedUsdProfit: stringOrNumber
+        suggestedGas: z.string().optional(),
+        expectedUsdProfit: stringOrNumber.optional()
     })
 });
 

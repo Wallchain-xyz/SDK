@@ -1,3 +1,4 @@
+import { makeBN } from '../utils';
 import { SwapPostValidator, TSwapPostResponse } from './validateResponse';
 
 export type TSwapRequestData = {
@@ -9,6 +10,12 @@ export type TSwapRequestData = {
 export type TSwapRequestError = {
     bid: null
 };
+
+export type TSwapInfo = {
+    tokenIn: string,
+    tokenOut: string,
+    amountIn: string
+}
 
 const RESP_TIMEOUT = 5 * 1000; // 5 seconds
 
@@ -33,7 +40,7 @@ export class WallchainApi {
     static chainFromId (key: number) {
         return idToCodeMap[String(key)];
     }
-    static makeSwapRequst (key: string, chainId: number, transaction: TSwapRequestData): Promise<(TSwapPostResponse | TSwapRequestError)> {
+    static makeSwapRequst (key: string, chainId: number, transaction: TSwapRequestData, swapInfo?: TSwapInfo): Promise<(TSwapPostResponse | TSwapRequestError)> {
         return new Promise(async (res, rej) => {
             const timeout = setTimeout(() => {
                 rej(new Error('Wallchain error: request timeout reached.'));
@@ -47,10 +54,21 @@ export class WallchainApi {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    sender: transaction.from,
-                    destination: transaction.to,
-                    data: transaction.data,
-                    value: transaction.value,
+                    txn: {
+                        sender: transaction.from,
+                        destination: transaction.to,
+                        data: transaction.data,
+                        value: transaction.value
+                    },
+                    swapInfo: swapInfo ? 
+                        { 
+                            ...swapInfo, 
+                            amountIn: `0x${makeBN(swapInfo.amountIn).toString(16)}`,
+                            nativeIn: 
+                                swapInfo.tokenIn.toLowerCase() === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'.toLowerCase()
+                        } 
+                        : null
+                  
                 })
             });
 
